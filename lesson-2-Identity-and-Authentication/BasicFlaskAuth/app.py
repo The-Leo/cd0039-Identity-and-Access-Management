@@ -7,9 +7,9 @@ from urllib.request import urlopen
 
 app = Flask(__name__)
 
-AUTH0_DOMAIN = @TODO_REPLACE_WITH_YOUR_DOMAIN
+AUTH0_DOMAIN = 'dev-zptzo60b.us.auth0.com'
 ALGORITHMS = ['RS256']
-API_AUDIENCE = @TODO_REPLACE_WITH_YOUR_API_AUDIENCE
+API_AUDIENCE = 'image'
 
 
 class AuthError(Exception):
@@ -104,21 +104,42 @@ def verify_decode_jwt(token):
                 'description': 'Unable to find the appropriate key.'
             }, 400)
 
+def check_permissions(permission, payload):
+    if 'permissions' not in payload:
+        abort(400)
 
-def requires_auth(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        token = get_token_auth_header()
-        try:
-            payload = verify_decode_jwt(token)
-        except:
-            abort(401)
-        return f(payload, *args, **kwargs)
+    if permission not in payload['permissions']:
+        abort(403)
+    return True
 
-    return wrapper
+def requires_auth(permission=''):
 
-@app.route('/headers')
-@requires_auth
-def headers(payload):
-    print(payload)
-    return 'Access Granted'
+    def requires_auth_decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = get_token_auth_header()
+            try:
+                payload = verify_decode_jwt(token)
+            except:
+                abort(401)
+
+            check_permissions(permission, payload)
+
+            return f(payload, *args, **kwargs)
+        return wrapper
+        
+        return requires_auth_decorator
+
+# @app.route('/headers')
+# @requires_auth
+# def headers(payload):
+#     print(payload)
+#     return 'Access Granted'
+
+
+@app.route('/image')
+@requires_auth('get:images')
+def images(jwt):
+
+    print (jwt)
+    return 'not implemented'
